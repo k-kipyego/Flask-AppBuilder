@@ -1,0 +1,116 @@
+{% extends "appbuilder/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Procurement Dashboard</h1>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Procurement Notices by Status</h2>
+            <div id="chart-container"></div>
+        </div>
+        <div class="col-md-6">
+            <h2>Recent Procurement Notices</h2>
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Estimated Value</th>
+                        <th>Submission Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for notice in notices %}
+                    <tr>
+                        <td>{{ notice.title }}</td>
+                        <td>${{ "{:,.2f}".format(notice.estimated_value) }}</td>
+                        <td>{{ notice.submission_date }}</td>
+                        <td>{{ notice.status_label }}</td>
+                        <td>
+                            {% if notice.status != 'approved' %}
+                            <form method="post" action="{{ url_for('ProcurementDashboard.update_status', notice_id=notice.id, new_status='approved') }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                            </form>
+                            {% endif %}
+                            {% if notice.status != 'rejected' %}
+                            <form method="post" action="{{ url_for('ProcurementDashboard.update_status', notice_id=notice.id, new_status='rejected') }}" style="display: inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    fetch("{{ url_for('ProcurementChartView.chart') }}")
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('chart-container').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.datasets[0].data,
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Procurement Notices by Status'
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}
+
+
+<!-- {% extends "appbuilder/base.html" %}
+
+{% block content %}
+    <h2>Procurement Dashboard</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Notices by Category</h4>
+            {% appbuilder_include view="ProcurementNoticeChartView" %}
+        </div>
+
+        <div class="col-md-6">
+            <h4>Procurement Notices and Decisions</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Deadline</th>
+                        <th>Budget</th>
+                        <th>Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for notice in notices %}
+                        <tr>
+                            <td>{{ notice.title }}</td>
+                            <td>{{ notice.category }}</td>
+                            <td>{{ notice.deadline }}</td>
+                            <td>{{ notice.budget }}</td>
+                            <td>{{ notice.decision or 'Pending' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %} -->
