@@ -1,0 +1,27 @@
+{% extends "appbuilder/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Procurement Opportunities</h1>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Estimated Value</th>
+                <th>Submission Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for opportunity in opportunities %}
+            <tr>
+                <td>{{ opportunity.title }}</td>
+                <td>${{ "{:,.2f}".format(opportunity.estimated_value) }}</td>
+                <td>{{ opportunity.submission_date }}</td>
+                <td>{{ opportunity.status_label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

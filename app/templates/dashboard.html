@@ -6,7 +6,7 @@
     
     <div class="row">
         <div class="col-md-6">
-            <h2>Procurement Notices by Status</h2>
+            <h2>Procurement Notices by Category</h2>
             <div id="chart-container"></div>
         </div>
         <div class="col-md-6">
@@ -15,9 +15,9 @@
                 <thead>
                     <tr>
                         <th>Title</th>
-                        <th>Estimated Value</th>
-                        <th>Submission Date</th>
-                        <th>Status</th>
+                        <th>Category</th>
+                        <th>Budget</th>
+                        <th>Deadline</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -25,20 +25,17 @@
                     {% for notice in notices %}
                     <tr>
                         <td>{{ notice.title }}</td>
-                        <td>${{ "{:,.2f}".format(notice.estimated_value) }}</td>
-                        <td>{{ notice.submission_date }}</td>
-                        <td>{{ notice.status_label }}</td>
+                        <td>{{ notice.category }}</td>
+                        <td>${{ "{:,.2f}".format(notice.budget) }}</td>
+                        <td>{{ notice.deadline }}</td>
                         <td>
-                            {% if notice.status != 'approved' %}
+                            <!-- Actions to update status -->
                             <form method="post" action="{{ url_for('ProcurementDashboard.update_status', notice_id=notice.id, new_status='approved') }}" style="display: inline;">
                                 <button type="submit" class="btn btn-success btn-sm">Approve</button>
                             </form>
-                            {% endif %}
-                            {% if notice.status != 'rejected' %}
                             <form method="post" action="{{ url_for('ProcurementDashboard.update_status', notice_id=notice.id, new_status='rejected') }}" style="display: inline;">
                                 <button type="submit" class="btn btn-danger btn-sm">Reject</button>
                             </form>
-                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -67,50 +64,10 @@
                     responsive: true,
                     title: {
                         display: true,
-                        text: 'Procurement Notices by Status'
+                        text: 'Procurement Notices by Category'
                     }
                 }
             });
         });
 </script>
 {% endblock %}
-
-
-<!-- {% extends "appbuilder/base.html" %}
-
-{% block content %}
-    <h2>Procurement Dashboard</h2>
-
-    <div class="row">
-        <div class="col-md-6">
-            <h4>Notices by Category</h4>
-            {% appbuilder_include view="ProcurementNoticeChartView" %}
-        </div>
-
-        <div class="col-md-6">
-            <h4>Procurement Notices and Decisions</h4>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Deadline</th>
-                        <th>Budget</th>
-                        <th>Decision</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for notice in notices %}
-                        <tr>
-                            <td>{{ notice.title }}</td>
-                            <td>{{ notice.category }}</td>
-                            <td>{{ notice.deadline }}</td>
-                            <td>{{ notice.budget }}</td>
-                            <td>{{ notice.decision or 'Pending' }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-{% endblock %} -->

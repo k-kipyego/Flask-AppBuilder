@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 CSRF_ENABLED = True
 SECRET_KEY = 'your-secret-key-here'
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
+SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:0987@localhost/RFPs'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 AUTH_TYPE = AUTH_DB

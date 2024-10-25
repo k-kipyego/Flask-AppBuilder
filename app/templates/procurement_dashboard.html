@@ -1,0 +1,112 @@
+{% block stylesheets %}
+<style>
+    .table {
+        border-collapse: collapse; /* Ensure borders are collapsed */
+    }
+    .table td, .table th {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px;
+        padding: 10px; /* Added padding for better spacing */
+        border: 1px solid #dee2e6; /* Added border for table cells */
+    }
+    .table-hover tbody tr:hover {
+        background-color: #e9ecef; /* Slightly darker hover effect */
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa; /* Light background for header */
+        z-index: 10;
+        border-bottom: 2px solid #dee2e6; /* Thicker bottom border for header */
+    }
+    .table .col-website-name { max-width: 200px; }
+    .table .col-title { max-width: 250px; }
+    .table .col-description { max-width: 300px; }
+    .table-responsive {
+        position: relative;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>All RFPs</h1>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Recent Procurement Notices</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th class="col-website-name">Website Name</th>
+                            <th>Website URL</th>
+                            <th class="col-title">Title</th>
+                            <th class="col-description">Description</th>
+                            <th>Date Posted</th>
+                            <th>Deadline</th>
+                            <th>Reference Number</th>
+                            <th>Category</th>
+                            <th>Location</th>
+                            <th>Language</th>
+                            <th>Contact</th>
+                            <th>Budget</th>
+                            <th>Type</th>
+                            <th>Original ID</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data %}
+                        <tr data-toggle="modal" data-target="#detailModal" 
+                            data-id="{{ item.id }}" 
+                            data-website_name="{{ item.website_name }}" 
+                            data-website_url="{{ item.website_url }}"
+                            data-title="{{ item.title }}"
+                            data-description="{{ item.description }}"
+                            data-date_posted="{{ item.date_posted }}"
+                            data-deadline="{{ item.deadline }}"
+                            data-reference_number="{{ item.reference_number }}"
+                            data-category="{{ item.category }}"
+                            data-location="{{ item.location }}"
+                            data-language="{{ item.language }}"
+                            data-contact="{{ item.contact }}"
+                            data-budget="{{ item.budget }}"
+                            data-type="{{ item.type }}"
+                            data-original_id="{{ item.original_id }}"
+                            data-created_at="{{ item.created_at }}">
+                            <td>{{ item.id or "N/A" }}</td>
+                            <td class="col-website-name" title="{{ item.website_name }}">{{ item.website_name or "N/A" }}</td>
+                            <td><a href="{{ item.website_url or "#" }}" target="_blank">{{ item.website_url or "N/A" }}</a></td>
+                            <td class="col-title" title="{{ item.title }}">{{ item.title or "N/A" }}</td>
+                            <td class="col-description" title="{{ item.description }}">{{ item.description or "N/A" }}</td>
+                            <td>{{ item.date_posted or "N/A" }}</td>
+                            <td>{{ item.deadline or "N/A" }}</td>
+                            <td>{{ item.reference_number or "N/A" }}</td>
+                            <td>{{ item.category or "N/A" }}</td>
+                            <td>{{ item.location or "N/A" }}</td>
+                            <td>{{ item.language or "N/A" }}</td>
+                            <td>{{ item.contact or "N/A" }}</td>
+                            <td>${{ "{:,.2f}".format(float(item.budget)) if item.budget.isnumeric() else "N/A" }}</td>
+                            <td>{{ item.type or "N/A" }}</td>
+                            <td>{{ item.original_id or "N/A" }}</td>
+                            <td>{{ item.created_at or "N/A" }}</td>
+                            <td>
+                                <button class="btn btn-success btn-sm approve-btn" data-id="{{ item.id }}">Approve</button>
+                                <button class="btn btn-danger btn-sm deny-btn" data-id="{{ item.id }}">Deny</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
