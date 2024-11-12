@@ -10,10 +10,4 @@ The Site for flask-appbuilder
 * `flask fab create-admin`
 * `flask run`
 
-## sidebar
 
-bases on [Pro Sidebar](https://azouaoui-med.github.io/pro-sidebar-template/)
-
-## Demo
-
-[http://witwall.pythonanywhere.com/](http://witwall.pythonanywhere.com/)
