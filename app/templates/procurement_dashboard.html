@@ -2,247 +2,226 @@
 
 {% block content %}
 <div class="container-fluid">
-    <h1 class="my-3 fixed-header">All RFPs</h1>
-    
-    {% if new_count > 0 %}
-    <div class="alert alert-info fade show d-flex align-items-center">
-        <strong class="mr-2">{{ new_count }}</strong> new procurement {{ 'opportunity' if new_count == 1 else 'opportunities' }} added at {{ latest_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}
-    </div>
-    {% endif %}
-
-    <div class="row">
+    <!-- Header Section -->
+    <div class="row mb-4">
         <div class="col-md-12">
-            <h2>Recent Procurement Notices</h2>
-            <div class="legend mb-3">
-                <span class="new-indicator">●</span> Newly added opportunities
+            <h1 class="my-3">Procurement Dashboard</h1>
+            
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Opportunities</h5>
+                            <h2 class="card-text">{{ total_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Active Opportunities</h5>
+                            <h2 class="card-text">{{ active_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">New Today</h5>
+                            <h2 class="card-text">{{ new_count }}</h2>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover table-bordered align-middle">
-                    <thead>
-                        <tr>
-                            <th>Status</th>
-                            <th class="col-website-name">Website Name</th>
-                            <th>Website URL</th>
-                            <th class="col-content">Title/Description</th>
-                            <th>Date Posted</th>
-                            <th>Deadline</th>
-                            <th>Reference Number</th>
-                            <th>Category</th>
-                            <th>Location</th>
-                            <th>Budget</th>
-                            <th>Type</th>
-                            <th>Original ID</th>
-                            <th>Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in data.items %}
-                        <tr class="{{ 'new-opportunity' if item.is_new else '' }}">
-                            <td>
-                                {% if item.is_new %}
-                                    <span class="new-indicator" title="New opportunity">●</span>
+
+            <!-- Filters Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{{ url_for('ProcurementDashboard.list') }}" class="btn btn-outline-secondary ms-2">Reset</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Title</th>
+                                    <th>Website</th>
+                                    <th>Actions</th>
+                                    <th>Category</th>
+                                    <th>Posted</th>
+                                    <th>Deadline</th>
+                                    <th>Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.items %}
+                                <tr class="{{ 'table-success' if item.is_new else '' }}">
+                                    <td>
+                                        {% if item.is_new %}
+                                            <span class="badge bg-success">New</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ item.display_title }}</div>
+                                        {% if item.description %}
+                                            <small class="text-muted">{{ item.description[:100] }}...</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.website_name }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if item.direct_url %}
+                                                <a href="{{ item.direct_url }}" target="_blank" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="fa fa-external-link"></i> Notice
+                                                </a>
+                                            {% endif %}
+                                            <a href="{{ item.website_url }}" target="_blank" 
+                                               class="btn btn-sm btn-outline-secondary">
+                                                <i class="fa fa-globe"></i> Website
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ item.status_label }}</span>
+                                    </td>
+                                    <td>{{ item.date_posted.strftime('%Y-%m-%d') if item.date_posted else 'N/A' }}</td>
+                                    <td>
+                                        {% if item.deadline %}
+                                            <span class="{{ 'text-danger' if item.deadline < now else 'text-success' }}">
+                                                {{ item.deadline.strftime('%Y-%m-%d') }}
+                                            </span>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.reference_number or 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="pagination-info">
+                            Showing {{ data.items|length }} of {{ total_count }} entries
+                        </div>
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {% if data.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=data.prev_num, per_page=data.per_page) }}">
+                                            Previous
+                                        </a>
+                                    </li>
                                 {% endif %}
-                            </td>
-                            <td title="{{ item.website_name }}">{{ item.website_name or "N/A" }}</td>
-                            <td><a href="{{ item.website_url or '#' }}" target="_blank" class="link-primary">{{ item.website_name or "N/A" }}</a></td>
-                            <td class="col-content" title="{{ item.title or item.description or 'N/A' }}">
-                                {{ item.title or item.description or "N/A" }}
-                            </td>
-                            <td>{{ item.date_posted or "N/A" }}</td>
-                            <td>{{ item.deadline or "N/A" }}</td>
-                            <td>{{ item.reference_number or "N/A" }}</td>
-                            <td>{{ item.category or "N/A" }}</td>
-                            <td>{{ item.location or "N/A" }}</td>
-                            <td>{{ item.budget or "N/A" }}</td>
-                            <td>{{ item.type or "N/A" }}</td>
-                            <td>{{ item.original_id or "N/A" }}</td>
-                            <td>{{ item.created_at or "N/A" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
 
-            <!-- Pagination Controls -->
-            <div class="pagination mt-3">
-                <form method="get" action="{{ url_for('ProcurementDashboard.list') }}" class="me-3">
-                    <label for="per_page">Items per page:</label>
-                    <select name="per_page" id="per_page" onchange="this.form.submit()" class="form-select form-select-sm d-inline-block w-auto">
-                        <option value="30" {% if data.per_page == 30 %}selected{% endif %}>30</option>
-                        <option value="50" {% if data.per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if data.per_page == 100 %}selected{% endif %}>100</option>
-                    </select>
-                </form>
+                                {% for page_num in range(1, min_pages + 1) %}
+                                    <li class="page-item {{ 'active' if page_num == data.page else '' }}">
+                                        <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=page_num, per_page=data.per_page) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
 
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                        {% if data.has_prev %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=data.prev_num, per_page=data.per_page) }}" aria-label="Previous">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        {# Display first pages (1-10) #}
-                        {% for page_num in range(1, min_pages + 1) %}
-                            <li class="page-item {% if page_num == data.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=page_num, per_page=data.per_page) }}">{{ page_num }}</a>
-                            </li>
-                        {% endfor %}
-
-                        {# Display ellipsis if there are more pages #}
-                        {% if data.pages > 10 %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-
-                        {# Display last three pages #}
-                        {% if last_pages_start %}
-                            {% for page_num in range(last_pages_start, max_pages + 1) %}
-                                <li class="page-item {% if page_num == data.page %}active{% endif %}">
-                                    <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=page_num, per_page=data.per_page) }}">{{ page_num }}</a>
-                                </li>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% if data.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=data.next_num, per_page=data.per_page) }}" aria-label="Next">
-                                    <span aria-hidden="true">&raquo;</span>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+                                {% if data.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('ProcurementDashboard.list', page=data.next_num, per_page=data.per_page) }}">
+                                            Next
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-
-{% block stylesheets %}
+{% block styles %}
+{{ super() }}
 <style>
-    /* Global Styling */
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .fixed-header {
-        position: sticky;
-        top: 0;
-        background-color: #fff;
-        z-index: 1000;
-        padding: 10px 0;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        transition: background-color 0.3s, box-shadow 0.3s;
-    }
-    .fixed-header.scrolled {
-        background-color: #f1f1f1;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: none;
+        margin-bottom: 1rem;
     }
 
-    /* Table Styling */
-    .table {
-        width: 100%;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid #dee2e6;
-    }
-    .table td, .table th {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 12px;
-        transition: background-color 0.3s;
-    }
-    .table-hover tbody tr:hover {
-        background-color: #f1f1f1;
-    }
-    .col-website-name { max-width: 150px; }
-    .col-content {
-        max-width: 350px;
-        white-space: normal;
-        line-height: 1.5;
-    }
-    .table-responsive {
-        max-height: 70vh;
-        overflow-y: auto;
-        margin-top: 20px;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    .table > :not(caption) > * > * {
+        padding: 1rem 0.75rem;
     }
 
-    /* Legend Styling */
-    .legend {
-        font-size: 16px;
-        color: #555;
-        margin-bottom: 10px;
+    .btn-group {
+        gap: 0.25rem;
     }
-    .legend .new-indicator {
-        color: #28a745;
-        font-size: 22px;
-        margin-right: 5px;
-        vertical-align: middle;
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
     }
-    .new-opportunity {
-        background-color: #e8f5e9 !important;
-    }
+
     .pagination {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .pagination form {
         margin-bottom: 0;
-    }
-
-    .pagination select {
-        margin-left: 0.5rem;
     }
 
     .page-link {
         padding: 0.375rem 0.75rem;
-        color: #007bff;
-        background-color: #fff;
-        border: 1px solid #dee2e6;
     }
 
-    .page-item.active .page-link {
-        background-color: #007bff;
-        border-color: #007bff;
-        color: white;
+    .table-responsive {
+        margin: -1rem;
     }
 
-    .page-item.disabled .page-link {
-        color: #6c757d;
-        pointer-events: none;
-        background-color: #fff;
-        border-color: #dee2e6;
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
     }
 </style>
-{% endblock stylesheets %}
+{% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
-    // Cache-busting parameter
-    const version = new Date().getTime();
-
-    // Scroll effect for header
-    window.onscroll = function() {
-        var header = document.querySelector('.fixed-header');
-        if (document.body.scrollTop > 50 || document.documentElement.scrollTop > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterForm = document.querySelector('form');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                const startDate = document.getElementById('start_date').value;
+                const endDate = document.getElementById('end_date').value;
+                
+                if (startDate > endDate) {
+                    e.preventDefault();
+                    alert('Start date cannot be later than end date');
+                }
+            });
         }
-    };
-
-    // Apply versioning to CSS for cache-busting
-    const styleSheet = document.createElement("link");
-    styleSheet.rel = "stylesheet";
-    styleSheet.href = "{{ url_for('static', filename='your_stylesheet.css') }}?v=" + version;
-    document.head.appendChild(styleSheet);
+    });
 </script>
-{% endblock scripts %}
+{% endblock %}

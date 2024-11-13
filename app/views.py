@@ -12,9 +12,10 @@ from flask_appbuilder.baseviews import expose, BaseView
 from flask_appbuilder.charts.views import DirectByChartView, GroupByChartView
 from flask_babel import lazy_gettext as _
 from werkzeug.exceptions import abort
-from .models import structured_scraped_data, WorldBankDataModel
+from .models import StructuredScrapedData, WorldBankDataModel
 from flask_appbuilder import BaseView, expose, has_access
 from flask_appbuilder.charts.views import ChartView
+from datetime import datetime, timedelta
 
 import sys
 
@@ -24,6 +25,8 @@ import time,re
 from flask_appbuilder import Model
 from flask_appbuilder._compat import as_unicode
 from sqlalchemy import distinct
+from flask_appbuilder import ModelView
+
 
 from sqlalchemy.exc import IntegrityError
 from flask_appbuilder.const import LOGMSG_ERR_DBI_DEL_GENERIC, LOGMSG_WAR_DBI_DEL_INTEGRITY
@@ -106,30 +109,27 @@ class ProcurementDashboard(BaseView):
     @expose('/')
     @has_access
     def list(self):
-        # Get the page number from the request args, default to 1
         page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 30))  # Default to 30 items per page
+        per_page = int(request.args.get('per_page', 30))
 
-        # Get all distinct created_at timestamps, ordered by timestamp
-        timestamps = db.session.query(distinct(structured_scraped_data.created_at))\
-            .order_by(structured_scraped_data.created_at.desc())\
+        timestamps = db.session.query(distinct(StructuredScrapedData.created_at))\
+            .order_by(StructuredScrapedData.created_at.desc())\
             .all()
         
-        # Get paginated records ordered by created_at
-        data = db.session.query(structured_scraped_data)\
-            .order_by(structured_scraped_data.created_at.desc())\
+        data = db.session.query(StructuredScrapedData)\
+            .order_by(StructuredScrapedData.created_at.desc())\
             .paginate(page, per_page, error_out=False)
 
-        # If we have timestamps, get the most recent one
         latest_timestamp = timestamps[0][0] if timestamps else None
         
-        # Mark records as new if they match the latest timestamp
         for item in data.items:
             item.is_new = (item.created_at == latest_timestamp)
+            # Ensure direct_url is available
+            if not hasattr(item, 'direct_url') or not item.direct_url:
+                item.direct_url = item.website_url
 
         new_count = len([item for item in data.items if item.is_new])
 
-        # Calculate pagination values
         min_pages = min(10, data.pages)
         max_pages = data.pages
         last_pages_start = max(11, max_pages - 2) if max_pages > 10 else None
@@ -150,32 +150,82 @@ class WorldBankDashboard(BaseView):
     @expose('/')
     @has_access
     def list(self):
-        # Get the page number from the request args, default to 1
         page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 30))  # Default to 30 items per page
+        per_page = int(request.args.get('per_page', 30))
 
-        # Fetch World Bank data from the database with pagination and sorting
-        world_bank_data = db.session.query(WorldBankDataModel)\
-            .order_by(WorldBankDataModel.docdt.desc())\
-            .paginate(page, per_page, error_out=False)
-
-        # Calculate pagination values
-        min_pages = min(10, world_bank_data.pages)  # First set of pages (1-10)
-        max_pages = world_bank_data.pages  # Total number of pages
+        # Get all data
+        query = db.session.query(WorldBankDataModel)
         
-        # Calculate the start of the last three pages
+        # Calculate statistics
+        total_count = query.count()
+        
+        # Calculate documents this month
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        month_count = query.filter(WorldBankDataModel.docdt >= thirty_days_ago).count()
+        
+        # Calculate recent documents (last 24 hours)
+        one_day_ago = datetime.now() - timedelta(days=1)
+        recent_count = query.filter(WorldBankDataModel.docdt >= one_day_ago).count()
+
+        # Get paginated data
+        world_bank_data = query.order_by(WorldBankDataModel.docdt.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        # Calculate pagination
+        min_pages = min(10, world_bank_data.pages)
+        max_pages = world_bank_data.pages
         last_pages_start = max(11, max_pages - 2) if max_pages > 10 else None
 
         return self.render_template(
             'world_bank_dashboard.html',
             world_bank_data=world_bank_data,
+            total_count=total_count,
+            month_count=month_count,
+            recent_count=recent_count,
             min_pages=min_pages,
             max_pages=max_pages,
             last_pages_start=last_pages_start
         )
 
+class ProcurementModelView(ModelView):
+    datamodel = SQLAInterface(StructuredScrapedData)
+    
+    # Define which columns to show in the list view
+    list_columns = ['title', 'reference_number', 'category', 'deadline', 'tender_link']
+    
+    # Define search columns
+    search_columns = ['title', 'description', 'reference_number', 'category']
+    
+    # Define which columns to show in the show view
+    show_columns = ['title', 'description', 'date_posted', 'deadline', 
+                   'reference_number', 'category', 'location', 'language',
+                   'contact', 'budget', 'type', 'website_name', 'tender_link']
+    
+    # Format the tender_link column as a clickable URL
+    @property
+    def show_template(self):
+        return "appbuilder/general/model/show_cascade.html"
+    
+    def pre_update(self, item):
+        """Ensure the tender_link is properly set before update"""
+        if not item.direct_url and item.website_url:
+            item.direct_url = item.website_url
+    
+    def pre_add(self, item):
+        """Ensure the tender_link is properly set before adding"""
+        if not item.direct_url and item.website_url:
+            item.direct_url = item.website_url
+
+# Add the new ModelView to FAB
+appbuilder.add_view(
+    ProcurementModelView, 
+    "Procurement Notices", 
+    icon="fa-file-text-o", 
+    category="Procurement"
+)
+
 class ProcurementChartView(ChartView):
-    datamodel = SQLAInterface(structured_scraped_data)
+    datamodel = SQLAInterface(StructuredScrapedData)
     chart_title = "Procurement Notices by Category"
     label_columns = {'category': 'Category'}
     group_by_columns = ['category']
