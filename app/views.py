@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 import sys
 
 from . import db, appbuilder
-from .models import ContactGroup, Gender, Contact, CountryStats, Country
+# from .models import ContactGroup, Gender, Contact, CountryStats, Country
 import time,re
 from flask_appbuilder import Model
 from flask_appbuilder._compat import as_unicode
