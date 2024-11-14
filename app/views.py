@@ -109,40 +109,114 @@ class ProcurementDashboard(BaseView):
     @expose('/')
     @has_access
     def list(self):
+        # Get pagination parameters
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 30))
 
-        timestamps = db.session.query(distinct(StructuredScrapedData.created_at))\
-            .order_by(StructuredScrapedData.created_at.desc())\
-            .all()
-        
-        data = db.session.query(StructuredScrapedData)\
-            .order_by(StructuredScrapedData.created_at.desc())\
-            .paginate(page, per_page, error_out=False)
+        # Get the most recent created_at timestamp
+        latest_timestamp = db.session.query(
+            db.func.max(StructuredScrapedData.created_at)
+        ).scalar()
 
-        latest_timestamp = timestamps[0][0] if timestamps else None
+        # Get all distinct created_at timestamps, ordered by timestamp
+        timestamps = db.session.query(
+            distinct(StructuredScrapedData.created_at)
+        ).order_by(
+            StructuredScrapedData.created_at.desc()
+        ).all()
+
+        # Get paginated data ordered by created_at desc
+        query = db.session.query(StructuredScrapedData)
         
+        # Order by created_at timestamp in descending order (newest first)
+        query = query.order_by(StructuredScrapedData.created_at.desc())
+        
+        data = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Process items and mark new ones
+        new_count = 0
         for item in data.items:
+            # Mark items from the latest batch as new
             item.is_new = (item.created_at == latest_timestamp)
-            # Ensure direct_url is available
-            if not hasattr(item, 'direct_url') or not item.direct_url:
-                item.direct_url = item.website_url
+            if item.is_new:
+                new_count += 1
+            
+            # Add time ago information
+            if item.created_at:
+                delta = datetime.now() - item.created_at
+                if delta.days == 0:
+                    if delta.seconds < 3600:
+                        item.time_ago = f"{delta.seconds // 60} minutes ago"
+                    else:
+                        item.time_ago = f"{delta.seconds // 3600} hours ago"
+                elif delta.days == 1:
+                    item.time_ago = "Yesterday"
+                else:
+                    item.time_ago = f"{delta.days} days ago"
+            else:
+                item.time_ago = "Unknown"
 
-        new_count = len([item for item in data.items if item.is_new])
-
+        # Calculate pagination values
         min_pages = min(10, data.pages)
         max_pages = data.pages
         last_pages_start = max(11, max_pages - 2) if max_pages > 10 else None
+
+        # Get total counts
+        total_count = query.count()
+        today = datetime.now().date()
+        today_start = datetime.combine(today, datetime.min.time())
+        
+        today_count = query.filter(
+            StructuredScrapedData.created_at >= today_start
+        ).count()
+
+        yesterday_start = today_start - timedelta(days=1)
+        yesterday_count = query.filter(
+            StructuredScrapedData.created_at.between(yesterday_start, today_start)
+        ).count()
 
         return self.render_template(
             'procurement_dashboard.html',
             data=data,
             new_count=new_count,
+            total_count=total_count,
+            today_count=today_count,
+            yesterday_count=yesterday_count,
             latest_timestamp=latest_timestamp,
             min_pages=min_pages,
             max_pages=max_pages,
-            last_pages_start=last_pages_start
+            last_pages_start=last_pages_start,
+            now=datetime.now()
         )
+
+    def get_time_ago(self, timestamp):
+        """Convert timestamp to 'time ago' format"""
+        if not timestamp:
+            return "Unknown"
+
+        now = datetime.now()
+        diff = now - timestamp
+
+        if diff.days == 0:
+            if diff.seconds < 60:
+                return "Just now"
+            if diff.seconds < 3600:
+                minutes = diff.seconds // 60
+                return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+            hours = diff.seconds // 3600
+            return f"{hours} hour{'s' if hours != 1 else ''} ago"
+        if diff.days == 1:
+            return "Yesterday"
+        if diff.days < 7:
+            return f"{diff.days} days ago"
+        if diff.days < 30:
+            weeks = diff.days // 7
+            return f"{weeks} week{'s' if weeks != 1 else ''} ago"
+        if diff.days < 365:
+            months = diff.days // 30
+            return f"{months} month{'s' if months != 1 else ''} ago"
+        years = diff.days // 365
+        return f"{years} year{'s' if years != 1 else ''} ago"
     
 class WorldBankDashboard(BaseView):
     route_base = "/world_bank"
@@ -237,7 +311,7 @@ class ProcurementChartView(ChartView):
         }
     ]
 
-appbuilder.add_view(ProcurementDashboard, "Dashboard", icon="fa-dashboard", category="Procurement")
+# appbuilder.add_view(ProcurementDashboard, "Dashboard", icon="fa-dashboard", category="Procurement")
 appbuilder.add_view(ProcurementChartView, "Procurement Chart", icon="fa-bar-chart", category="Procurement")
 appbuilder.add_view(WorldBankDashboard, "World Bank Opportunities", icon="fa-globe", category="World Bank")  
 
